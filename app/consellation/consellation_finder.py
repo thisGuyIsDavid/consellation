@@ -28,6 +28,9 @@ class StorePoint:
     def get_point(self):
         return [self.x, self.y]
 
+    def get_store_id(self) -> str:
+        return str(self.store_id)
+
 
 
 class KDTree(object):
@@ -184,7 +187,8 @@ class ConsellationFinder:
 
     ACCEPTABLE_DISTANCE = 10
 
-    def __init__(self, constellation_points):
+    def __init__(self, constellation_name,  constellation_points):
+        self.constellation_name: str = constellation_name
         self.store_list: typing.List[StorePoint] = []
         self.store_kd_tree: typing.Optional[KDTree] = None
         self.constellation_points: list = constellation_points
@@ -275,6 +279,13 @@ class ConsellationFinder:
         projected_constellation = get_projected_constellation(store_point_1, store_point_2, self.constellation_points)
         return self.get_recursive_constellation(projected_constellation, self.store_list, [])
 
+    def write_consellation(self, consellation_points):
+        with open('points.txt', 'a') as record:
+            record.write('%s,%s\n' % (
+                self.constellation_name,
+                ','.join([x.get_store_id() for x in consellation_points])
+            ))
+
     def run(self):
         self.setup()
         permutations_checked = 0
@@ -282,6 +293,7 @@ class ConsellationFinder:
             result = self.get_consellation(store_permutation[0], store_permutation[1])
             if result is not None:
                 print('const points =', [x.get_point() for x in result])
+                self.write_consellation(result)
             permutations_checked += 1
-            if permutations_checked % 100 == 0:
+            if permutations_checked % 1000000 == 0:
                 print('Checked %s combinations' % permutations_checked)
