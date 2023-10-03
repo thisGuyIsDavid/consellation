@@ -22,8 +22,12 @@ class StorePoint:
     def __repr__(self):
         return self.__str__()
 
+    def __hash__(self):
+        return self.store_id
+
     def get_point(self):
         return [self.x, self.y]
+
 
 
 class KDTree(object):
@@ -196,15 +200,11 @@ class ConsellationFinder:
                     'longitude': float(split_line[2])
                 })
         self.store_list = [StorePoint(**x) for x in response]
+        self.store_kd_tree = KDTree(self.store_list, dim=2)
 
-    def set_k_d_tree(self, store_list):
-        start = time.time()
-        self.store_kd_tree = KDTree(store_list, dim=2)
-        print('KD Tree build took %s seconds' % (time.time() - start))
 
     def setup(self):
         self.set_store_points()
-        self.set_k_d_tree(self.store_list)
 
     @staticmethod
     def haversine(lon1, lat1, lon2, lat2):
@@ -234,22 +234,18 @@ class ConsellationFinder:
             return
         if coordinates[1] < -90 or coordinates[1] > 90:
             return
-
         distance, point = self.store_kd_tree.get_nearest(coordinates)
-
         if self.haversine_from_points(point, coordinates) <= self.ACCEPTABLE_DISTANCE:
             return point
 
-    @staticmethod
-    def get_store_near_coordinates(coordinates, store_list) -> typing.Optional[StorePoint]:
+    def get_store_near_coordinates(self, coordinates, store_list) -> typing.Optional[StorePoint]:
         if coordinates[0] < -180 or coordinates[0] > 180:
             return
         if coordinates[1] < -90 or coordinates[1] > 90:
             return
-        distance, point = KDTree(store_list, dim=2).get_nearest(coordinates)
+        distance, point = self.store_kd_tree.get_nearest(coordinates)
         if ConsellationFinder.haversine_from_points(point, coordinates) <= ConsellationFinder.ACCEPTABLE_DISTANCE:
             return point
-
 
     def examine_location_permutation(self, list_of_stores):
         location_1, location_2 = list_of_stores[0], list_of_stores[1]
@@ -264,13 +260,15 @@ class ConsellationFinder:
 
     def get_recursive_constellation(self, projected_constellation, store_list, stores_in_constellation: typing.List):
         point_to_check = projected_constellation[len(stores_in_constellation)]
-        closest_store = ConsellationFinder.get_store_near_coordinates(point_to_check, store_list)
+        closest_store = self.get_store_near_coordinates(point_to_check, store_list)
         if closest_store is None:
             return
-        store_list = [x for x in store_list if x.store_id != closest_store.store_id]
         stores_in_constellation.append(closest_store)
         if len(stores_in_constellation) == len(projected_constellation):
-            return stores_in_constellation
+            if len(set(stores_in_constellation)) == len(stores_in_constellation):
+                return stores_in_constellation
+            else:
+                return
         return self.get_recursive_constellation(projected_constellation, store_list, stores_in_constellation)
 
     def get_consellation(self, store_point_1: StorePoint, store_point_2: StorePoint):
@@ -281,11 +279,9 @@ class ConsellationFinder:
         self.setup()
         permutations_checked = 0
         for store_permutation in permutations(self.store_list, 2):
-            print(store_permutation)
             result = self.get_consellation(store_permutation[0], store_permutation[1])
             if result is not None:
                 print('const points =', [x.get_point() for x in result])
-            print(result)
             permutations_checked += 1
-            if permutations_checked % 100000 == 0:
+            if permutations_checked % 100 == 0:
                 print('Checked %s combinations' % permutations_checked)
