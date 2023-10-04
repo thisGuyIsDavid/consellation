@@ -1,190 +1,15 @@
 import time
 import typing
-from itertools import permutations
 from math import radians, cos, sin, asin, sqrt
 
 from app.consellation.constellation_utils import get_projected_constellation
-
-
-class StorePoint:
-
-    def __init__(self, **kwargs):
-        self.store_id = kwargs.get('store_id')
-        self.x = kwargs.get('longitude')
-        self.y = kwargs.get('latitude')
-
-    def __getitem__(self, key):
-        return [self.x, self.y][key]
-
-    def __str__(self):
-        return f"Point {self.store_id} ({self.x}, {self.y})"
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __hash__(self):
-        return self.store_id
-
-    def get_point(self):
-        return [self.x, self.y]
-
-    def get_store_id(self) -> str:
-        return str(self.store_id)
-
-
-class KDTree(object):
-
-    """
-    A super short KD-Tree for points...
-    so concise that you can copypasta into your homework
-    without arousing suspicion.
-
-    This implementation only supports Euclidean distance.
-
-    The points can be any array-like type, e.g:
-        lists, tuples, numpy arrays.
-
-    Usage:
-    1. Make the KD-Tree:
-        `kd_tree = KDTree(points, dim)`
-    2. You can then use `get_knn` for k nearest neighbors or
-       `get_nearest` for the nearest neighbor
-
-    points are be a list of points: [[0, 1, 2], [12.3, 4.5, 2.3], ...]
-    """
-    def __init__(self, points, dim, dist_sq_func=None):
-        """Makes the KD-Tree for fast lookup.
-
-        Parameters
-        ----------
-        points : list<point>
-            A list of points.
-        dim : int
-            The dimension of the points.
-        dist_sq_func : function(point, point), optional
-            A function that returns the squared Euclidean distance
-            between the two points.
-            If omitted, it uses the default implementation.
-        """
-
-        if dist_sq_func is None:
-            dist_sq_func = lambda a, b: sum((x - b[i]) ** 2 for i, x in enumerate(a))
-
-        def make(points, i=0):
-            if len(points) > 1:
-                points.sort(key=lambda x: x[i])
-                i = (i + 1) % dim
-                m = len(points) >> 1
-                return [make(points[:m], i), make(points[m + 1:], i),
-                        points[m]]
-            if len(points) == 1:
-                return [None, None, points[0]]
-
-        def add_point(node, point, i=0):
-            if node is not None:
-                dx = node[2][i] - point[i]
-                for j, c in ((0, dx >= 0), (1, dx < 0)):
-                    if c and node[j] is None:
-                        node[j] = [None, None, point]
-                    elif c:
-                        add_point(node[j], point, (i + 1) % dim)
-
-        import heapq
-        def get_knn(node, point, k, return_dist_sq, heap, i=0, tiebreaker=1):
-            if node is not None:
-                dist_sq = dist_sq_func(point, node[2])
-                dx = node[2][i] - point[i]
-                if len(heap) < k:
-                    heapq.heappush(heap, (-dist_sq, tiebreaker, node[2]))
-                elif dist_sq < -heap[0][0]:
-                    heapq.heappushpop(heap, (-dist_sq, tiebreaker, node[2]))
-                i = (i + 1) % dim
-                # Goes into the left branch, then the right branch if needed
-                for b in (dx < 0, dx >= 0)[:1 + (dx * dx < -heap[0][0])]:
-                    get_knn(node[b], point, k, return_dist_sq,
-                            heap, i, (tiebreaker << 1) | b)
-            if tiebreaker == 1:
-                return [(-h[0], h[2]) if return_dist_sq else h[2]
-                        for h in sorted(heap)][::-1]
-
-        def walk(node):
-            if node is not None:
-                for j in 0, 1:
-                    for x in walk(node[j]):
-                        yield x
-                yield node[2]
-
-        self._add_point = add_point
-        self._get_knn = get_knn
-        self._root = make(points)
-        self._walk = walk
-
-    def __iter__(self):
-        return self._walk(self._root)
-
-    def add_point(self, point):
-        """Adds a point to the kd-tree.
-
-        Parameters
-        ----------
-        point : array-like
-            The point.
-        """
-        if self._root is None:
-            self._root = [None, None, point]
-        else:
-            self._add_point(self._root, point)
-
-    def get_knn(self, point, k, return_dist_sq=True):
-        """Returns k nearest neighbors.
-
-        Parameters
-        ----------
-        point : array-like
-            The point.
-        k: int
-            The number of nearest neighbors.
-        return_dist_sq : boolean
-            Whether to return the squared Euclidean distances.
-
-        Returns
-        -------
-        list<array-like>
-            The nearest neighbors.
-            If `return_dist_sq` is true, the return will be:
-                [(dist_sq, point), ...]
-            else:
-                [point, ...]
-        """
-        return self._get_knn(self._root, point, k, return_dist_sq, [])
-
-    def get_nearest(self, point, return_dist_sq=True):
-        """Returns the nearest neighbor.
-
-        Parameters
-        ----------
-        point : array-like
-            The point.
-        return_dist_sq : boolean
-            Whether to return the squared Euclidean distance.
-
-        Returns
-        -------
-        array-like
-            The nearest neighbor.
-            If the tree is empty, returns `None`.
-            If `return_dist_sq` is true, the return will be:
-                (dist_sq, point)
-            else:
-                point
-        """
-        l = self._get_knn(self._root, point, 1, return_dist_sq, [])
-        return l[0] if len(l) else None
+from kd_tree import KDTree
+from store_list import StorePoint
 
 
 class ConsellationFinder:
 
-    ACCEPTABLE_DISTANCE = 10
+    ACCEPTABLE_DISTANCE = 25
 
     def __init__(self, constellation_name,  constellation_points):
         self.constellation_name: str = constellation_name
@@ -200,16 +25,7 @@ class ConsellationFinder:
         self.y_min: typing.Optional[float] = None
 
     def set_store_points(self):
-        response = []
-        with open('store.txt', 'r') as raw_stores:
-            for line in raw_stores:
-                split_line = line.split(',')
-                response.append({
-                    'store_id': int(split_line[0]),
-                    'latitude': float(split_line[1]),
-                    'longitude': float(split_line[2])
-                })
-        self.store_list = [StorePoint(**x) for x in response]
+        self.store_list = StorePoint.get_stores()
         self.store_kd_tree = KDTree(self.store_list, dim=2)
 
     def set_boundaries(self):
@@ -221,7 +37,6 @@ class ConsellationFinder:
     def setup(self):
         self.set_store_points()
         self.set_boundaries()
-        print('Set')
 
     @staticmethod
     def haversine(lon1, lat1, lon2, lat2):
@@ -255,11 +70,7 @@ class ConsellationFinder:
         if self.haversine_from_points(point, coordinates) <= self.ACCEPTABLE_DISTANCE:
             return point
 
-    def get_store_near_coordinates(self, coordinates, store_list) -> typing.Optional[StorePoint]:
-        if coordinates[0] < -180 or coordinates[0] > 180:
-            return
-        if coordinates[1] < -90 or coordinates[1] > 90:
-            return
+    def get_store_near_coordinates(self, coordinates) -> typing.Optional[StorePoint]:
         distance, point = self.store_kd_tree.get_nearest(coordinates)
         if ConsellationFinder.haversine_from_points(point, coordinates) <= ConsellationFinder.ACCEPTABLE_DISTANCE:
             return point
@@ -275,9 +86,9 @@ class ConsellationFinder:
             stores_in_constellation.append(store_in_constellation)
         return stores_in_constellation
 
-    def get_recursive_constellation(self, projected_constellation, store_list, stores_in_constellation: typing.List):
+    def get_recursive_constellation(self, projected_constellation, stores_in_constellation: typing.List):
         point_to_check = projected_constellation[len(stores_in_constellation)]
-        closest_store = self.get_store_near_coordinates(point_to_check, store_list)
+        closest_store = self.get_store_near_coordinates(point_to_check)
         if closest_store is None:
             return
         stores_in_constellation.append(closest_store)
@@ -286,7 +97,7 @@ class ConsellationFinder:
                 return stores_in_constellation
             else:
                 return
-        return self.get_recursive_constellation(projected_constellation, store_list, stores_in_constellation)
+        return self.get_recursive_constellation(projected_constellation, stores_in_constellation)
 
     def get_consellation(self, store_point_1: StorePoint, store_point_2: StorePoint):
         projected_constellation = get_projected_constellation(store_point_1, store_point_2, self.constellation_points)
@@ -305,7 +116,7 @@ class ConsellationFinder:
             self.boundary_fails += 1
             return
 
-        return self.get_recursive_constellation(projected_constellation, self.store_list, [])
+        return self.get_recursive_constellation(projected_constellation, [])
 
     def write_consellation(self, consellation_points):
         with open('points.txt', 'a') as record:
@@ -330,7 +141,6 @@ class ConsellationFinder:
                     print('Checked %s combinations' % permutations_checked)
                     print('Took %s seconds' % (time.time() - start_time))
                     start_time = time.time()
-            print(i, self.boundary_fails)
             self.boundary_fails = 0
 
 

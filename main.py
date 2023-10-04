@@ -13,15 +13,15 @@ if __name__ == '__main__':
     hercules = [[12.5, 96.5], [10.5, 76.5], [20.5, 68.5], [36.5, 27.5], [3.5, -21.5], [52.5, 32.5], [16.5, -29.5], [41.5, -1.5], [26.5, -34.5], [34.5, -17.5], [64.5, 57.5], [65.5, 9.5], [74.5, 7.5], [102.5, 7.5], [85.5, -29.5], [80.5, 52.5], [93.5, 46.5], [103.5, 39.5], [114.5, 42.5]]
 
     constellations = [
-        #['Line', line],
+        ['Orion', orion],
         ['Ursa Major', ursa_major],
+        ['Line', line],
+        ['Leo', leo],
         ['Hercules', hercules],
         ['Leo Minor', leo_minor],
-        ['Orion', orion],
         ['Taurus', taurus],
         ['Ursa Minor', ursa_minor],
         ['Lyra', lyra],
-        ['Leo', leo],
         ['Crown', crown]
     ]
 
