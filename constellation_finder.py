@@ -104,6 +104,7 @@ class ConstellationFinder:
         store_list = StorePoint.get_stores()
         store_lookup = KDTree(store_list, dim=2)
         constellations = Constellation.get_constellations()
+        stores_examined = 0
         for i, store_1 in enumerate(store_list):
             for store_2 in store_list[i + 1:]:
                 ConstellationFinder(
@@ -112,6 +113,9 @@ class ConstellationFinder:
                     constellations=constellations,
                     store_lookup=store_lookup
                 ).find()
+            stores_examined += 1
+            if stores_examined % 1000 == 0:
+                print('Examined %s stores' % stores_examined)
 
 
 if __name__ == '__main__':
