@@ -34,6 +34,8 @@ class ConsellationFinder:
         self.y_min = min([s.y for s in self.store_list])
         self.y_max = max([s.y for s in self.store_list])
 
+        print(self.x_min, self.x_max, self.y_min, self.y_max)
+
     def setup(self):
         self.set_store_points()
         self.set_boundaries()
@@ -142,5 +144,4 @@ class ConsellationFinder:
                     print('Took %s seconds' % (time.time() - start_time))
                     start_time = time.time()
             self.boundary_fails = 0
-
 
