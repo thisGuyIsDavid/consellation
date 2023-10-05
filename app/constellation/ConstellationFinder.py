@@ -4,7 +4,7 @@ from app.constellation.Constellation import Constellation
 from app.constellation.StorePoint import StorePoint
 from app.constellation.KDTree import KDTree
 from math import radians, cos, sin, asin, sqrt
-from app.db import insert_many
+from app.db import insert_many, insert
 import uuid
 
 
@@ -91,21 +91,17 @@ class ConstellationFinder:
             self.write_constellation(projected_constellation[0], found_constellation)
 
     def write_constellation(self, constellation_name, found_constellation: typing.List[StorePoint]):
-        constellation_id = uuid.uuid4()
-        insert_many(
+        insert(
             """
-            INSERT INTO cf_constellations_found (
-                constellation_name, constellation_uuid, store_id, when_created
+            INSERT INTO cf_raw_constellations (
+                constellation_name, constellation_string, when_created
             ) VALUES (
-                %(constellation_name)s, %(constellation_uuid)s, %(store_id)s, CURRENT_TIMESTAMP
+                %(constellation_name)s,  %(constellation_string)s, CURRENT_TIMESTAMP
             )
-            """, [
-                {
-                    'constellation_name': constellation_name,
-                    'constellation_uuid': constellation_id,
-                    'store_id': x.store_id
-                } for x in found_constellation
-            ]
+            """, {
+                'constellation_name': constellation_name,
+                'constellation_string': '|'.join([x.get_store_id() for x in found_constellation])
+            }
         )
 
     @staticmethod
