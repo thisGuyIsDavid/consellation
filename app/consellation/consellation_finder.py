@@ -3,8 +3,8 @@ import typing
 from math import radians, cos, sin, asin, sqrt
 
 from app.consellation.constellation_utils import get_projected_constellation
-from kd_tree import KDTree
-from store_list import StorePoint
+from app.constellation.KDTree import KDTree
+from app.constellation.StorePoint import StorePoint
 
 
 class ConsellationFinder:
