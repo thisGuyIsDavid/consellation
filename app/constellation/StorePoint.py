@@ -65,6 +65,7 @@ class StorePoint:
             FROM store_list
             WHERE latitude IS NOT NULL AND longitude IS NOT NULL
             AND country_code = 'US'
+            AND id NOT IN (SELECT store_id FROM cf_stores_checked)
             LIMIT 1
             """
         )
