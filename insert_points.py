@@ -2,6 +2,9 @@ from app.db import insert_many, insert
 import uuid
 import os
 
+store_ids_found = []
+constellations_found = []
+
 with open('points.txt') as raw_points:
     for line in raw_points:
         stripped_line = line.strip()
@@ -9,21 +12,25 @@ with open('points.txt') as raw_points:
         constellation_name = split_line[0]
         store_ids = split_line[1:]
 
+        constellations_found.append({
+            'constellation_name': constellation_name,
+            'constellation_string': '|'.join(store_ids),
+        })
+        store_ids_found.append(store_ids[0])
+        continue
         constellation_id = uuid.uuid4()
-        insert_many(
+        insert(
             """
-            INSERT INTO cf_constellations_found (
-                constellation_name, constellation_uuid, store_id, when_created
+            INSERT INTO cf_raw_constellations (
+                constellation_name, constellation_string, when_created
             ) VALUES (
-                %(constellation_name)s, %(constellation_uuid)s, %(store_id)s, CURRENT_TIMESTAMP
+                %(constellation_name)s,  %(constellation_string)s, CURRENT_TIMESTAMP
             )
-            """, [
-                {
-                    'constellation_name': constellation_name,
-                    'constellation_uuid': constellation_id,
-                    'store_id': x
-                } for x in store_ids
-            ]
+            """,
+            {
+                'constellation_name': constellation_name,
+                'constellation_string': '|'.join(store_ids),
+            }
         )
         insert(
             """
@@ -37,3 +44,20 @@ with open('points.txt') as raw_points:
                 'checker_name': os.getenv('PROCESSOR_NAME')
             }
         )
+
+
+for i in range(490):
+    cf = constellations_found[i * 100: (i + 1) * 100]
+    insert_many(
+        """
+        INSERT INTO cf_raw_constellations (
+            constellation_name, constellation_string, when_created
+        ) VALUES (
+            %(constellation_name)s,  %(constellation_string)s, CURRENT_TIMESTAMP
+        )
+        """,
+        cf
+    )
+
+print(len(set(store_ids_found)))
+print(len(constellations_found))

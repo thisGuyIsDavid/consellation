@@ -7,9 +7,9 @@ from math import radians, cos, sin, asin, sqrt
 from app.db import insert_many
 import uuid
 
-class ConstellationFinder:
 
-    ACCEPTABLE_DISTANCE = 25
+class ConstellationFinder:
+    ACCEPTABLE_DISTANCE = 10
     BOUNDARIES = [[-157.80430603, 17.69149971 ], [-64.70480347, 61.19303131]]
 
     def __init__(self, **kwargs):
@@ -128,6 +128,7 @@ class ConstellationFinder:
                 ).find()
             store_to_examine.set_as_processed()
             store_to_examine = StorePoint.get_store()
+
 
 if __name__ == '__main__':
     ConstellationFinder.run()
