@@ -7,7 +7,7 @@ from app.db import insert
 
 
 class ConstellationFinder:
-    ACCEPTABLE_DISTANCE = 10
+    ACCEPTABLE_DISTANCE = 5
     BOUNDARIES = [[-157.80430603, 17.69149971 ], [-64.70480347, 61.19303131]]
 
     def __init__(self, **kwargs):
@@ -15,7 +15,7 @@ class ConstellationFinder:
         self.point_2: StorePoint = kwargs.get('point_2')
         self.constellation: Constellation = kwargs.get('constellation')
         self.projected_constellation: typing.Optional[typing.List] = None
-        self.minimum_constellation_size: float = kwargs.get('minimum_projected_size', 0)
+        self.minimum_constellation_size: float = kwargs.get('minimum_constellation_size', 100)
 
         self.store_lookup = kwargs.get('store_lookup')
         self.set_projected_constellation()
@@ -90,17 +90,18 @@ class ConstellationFinder:
                 return
         return self.get_recursive_constellation(stores_in_constellation)
 
-    def write_constellation(self, found_constellation: typing.List[StorePoint]):
+    def write_constellation(self, found_constellation: typing.List[StorePoint], size: float):
         insert(
             """
             INSERT INTO cf_raw_constellations (
-                constellation_name, constellation_string, when_created
+                constellation_name, constellation_string, size, when_created
             ) VALUES (
-                %(constellation_name)s,  %(constellation_string)s, CURRENT_TIMESTAMP
+                %(constellation_name)s,  %(constellation_string)s, %(size)s, CURRENT_TIMESTAMP
             )
             """, {
                 'constellation_name': self.constellation.name,
-                'constellation_string': '|'.join([x.get_store_id() for x in found_constellation])
+                'constellation_string': '|'.join([x.get_store_id() for x in found_constellation]),
+                'size': size
             }
         )
 
@@ -110,5 +111,8 @@ class ConstellationFinder:
         found_constellation = self.get_recursive_constellation([])
         if found_constellation is None:
             return
-        self.write_constellation(found_constellation)
-        return self.get_constellation_size(found_constellation)
+        found_constellation_size = ConstellationFinder.get_constellation_size(found_constellation)
+        if found_constellation_size < 100:
+            return
+        self.write_constellation(found_constellation, found_constellation_size)
+        return found_constellation_size

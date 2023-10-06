@@ -1,31 +1,75 @@
-from app.db import get_all_rows
+import typing
+
+from app.db import get_all_rows, update_many
 from app.constellation.StorePoint import StorePoint
 from app.constellation.ConstellationFinder import ConstellationFinder
 
-def get_points(uuid: str):
+def translate_points():
+    string = '3864550|3863985|3864033|3863883|3863828|3863981|3864375|3864385|3864626|3864448|3864611|3864077|3864368|3864615|3863922|3864686'
+    stores = get_all_rows(
+        """
+        SELECT id, company_name, latitude, longitude FROM store_list
+        """
+    )
+    stores_as_lookup = {str(p['id']): p for p in stores}
+
+    points = []
+    for store in string.split('|'):
+        store_deats = stores_as_lookup.get(store)
+        print(store_deats['company_name'])
+        points.append([store_deats['longitude'], store_deats['latitude']])
+
+    print('const points =', points)
+
+
+def get_constellation_string_as_points(constellation_string: str, store_lookup: typing.Dict):
+    points = []
+    for store in constellation_string.split('|'):
+        store_deats = store_lookup.get(store)
+        points.append([store_deats['longitude'], store_deats['latitude']])
+    return points
+
+
+def set_size_of_points():
+    stores = get_all_rows(
+        """
+        SELECT id, company_name, latitude, longitude FROM store_list
+        """
+    )
+    stores_as_lookup = {str(p['id']): p for p in stores}
     points = get_all_rows(
         """
-        SELECT constellation_name, CF.store_id, latitude, longitude 
-        FROM cf_constellations_found CF
-        JOIN store_list
-            ON store_list.id = CF.store_id
-        WHERE constellation_uuid= %(uuid)s
-        """, {
-            'uuid': uuid
-        }
+        SELECT id, constellation_string
+        FROM cf_raw_constellations
+        WHERE size IS NULL
+        ORDER BY when_created DESC
+        LIMIT 1000
+        """
     )
-    return [StorePoint(**x) for x in points]
+    if len(points) == 0:
+        return
+    to_update = []
 
-points = get_points('ad9a733c-5246-4a5f-bf75-77fb81901200')
+    for point in points:
+        as_coordinates = get_constellation_string_as_points(point.get('constellation_string'), stores_as_lookup)
+        to_update.append(
+            {
+                'id': point['id'],
+                'size': ConstellationFinder.get_constellation_size(as_coordinates)
+            }
+        )
 
-max_x = max([p.x for p in points])
-max_y = max([p.y for p in points])
-min_x = min([p.x for p in points])
-min_y = min([p.y for p in points])
+    update_many(
+        """
+        UPDATE cf_raw_constellations
+        SET size = %(size)s
+        WHERE id = %(id)s
+        """,
+        to_update
+    )
+    return len(to_update)
 
-distance = ConstellationFinder.haversine(
-    max_x, max_y, min_x, min_y
-)
-print(distance)
 
-
+rows_affected = set_size_of_points()
+while rows_affected is not None:
+    set_size_of_points()

@@ -42,32 +42,34 @@ class StorePoint:
         )
 
     @staticmethod
-    def get_stores():
+    def get_stores(company_name):
         response = get_all_rows(
             """
             SELECT id AS store_id, latitude, longitude
             FROM store_list
             WHERE latitude IS NOT NULL AND longitude IS NOT NULL
             AND id != 676778
+            AND company_name = %(company_name)s
             AND country_code = 'US'
             AND TRIM(state_alpha) NOT IN ('AK', 'HI')
             AND longitude < 0 AND latitude > 0
             ORDER BY id
-            """
+            """, {'company_name': company_name}
         )
         return [StorePoint(**x) for x in response]
 
     @staticmethod
-    def get_store():
+    def get_store(company_name):
         response = get_row(
             """
             SELECT id AS store_id, latitude, longitude
             FROM store_list
             WHERE latitude IS NOT NULL AND longitude IS NOT NULL
             AND country_code = 'US'
+            AND company_name = %(company_name)s
             AND id NOT IN (SELECT store_id FROM cf_stores_checked)
             ORDER BY RAND()
             LIMIT 1
-            """
+            """, {'company_name': company_name}
         )
         return StorePoint(**response)
