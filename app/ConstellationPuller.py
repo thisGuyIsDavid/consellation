@@ -4,8 +4,7 @@ from app.db import get_all_rows, update_many
 from app.constellation.StorePoint import StorePoint
 from app.constellation.ConstellationFinder import ConstellationFinder
 
-def translate_points():
-    string = '3864550|3863985|3864033|3863883|3863828|3863981|3864375|3864385|3864626|3864448|3864611|3864077|3864368|3864615|3863922|3864686'
+def translate_points(point_string):
     stores = get_all_rows(
         """
         SELECT id, company_name, latitude, longitude FROM store_list
@@ -14,7 +13,7 @@ def translate_points():
     stores_as_lookup = {str(p['id']): p for p in stores}
 
     points = []
-    for store in string.split('|'):
+    for store in point_string.split('|'):
         store_deats = stores_as_lookup.get(store)
         print(store_deats['company_name'])
         points.append([store_deats['longitude'], store_deats['latitude']])
@@ -69,7 +68,4 @@ def set_size_of_points():
     )
     return len(to_update)
 
-
-rows_affected = set_size_of_points()
-while rows_affected is not None:
-    set_size_of_points()
+translate_points('3628761|3626618|3626387|169627|185402|185637|3624212')
