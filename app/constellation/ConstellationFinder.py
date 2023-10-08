@@ -15,7 +15,7 @@ class ConstellationFinder:
         self.point_2: StorePoint = kwargs.get('point_2')
         self.constellation: Constellation = kwargs.get('constellation')
         self.projected_constellation: typing.Optional[typing.List] = None
-        self.minimum_constellation_size: float = kwargs.get('minimum_constellation_size', 100)
+        self.minimum_constellation_size: float = kwargs.get('minimum_constellation_size', 500)
 
         self.store_lookup = kwargs.get('store_lookup')
         self.set_projected_constellation()

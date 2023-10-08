@@ -1,8 +1,8 @@
 import typing
 
-from app.db import get_all_rows, update_many
-from app.constellation.StorePoint import StorePoint
 from app.constellation.ConstellationFinder import ConstellationFinder
+from app.db import get_all_rows, update_many
+
 
 def translate_points(point_string):
     stores = get_all_rows(
@@ -67,5 +67,3 @@ def set_size_of_points():
         to_update
     )
     return len(to_update)
-
-translate_points('3628761|3626618|3626387|169627|185402|185637|3624212')

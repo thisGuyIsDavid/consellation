@@ -20,7 +20,7 @@ class ConstellationsFinder:
         self.store_lookup: KDTree = store_lookup
 
     def process_constellation(self, constellation: Constellation):
-        minimum_constellation_size = 100
+        minimum_constellation_size = 250
         for store_to_test in self.store_list:
             #   Don't check a store against itself.
             if store_to_test.store_id == self.store_to_examine.store_id:
