@@ -68,8 +68,29 @@ class StorePoint:
     def get_store():
         response = get_row(
             """
-            SELECT id AS store_id, latitude, longitude
-            FROM store_list
+            SELECT store_list.id AS store_id, store_list.latitude, store_list.longitude FROM store_list
+            JOIN (
+                SELECT S.latitude, S.longitude, IF(C.COUNT IS NULL, 0, C.COUNT)
+                FROM (
+                    SELECT ROUND(latitude) AS latitude, ROUND(longitude) AS longitude
+                    FROM store_list 
+                    WHERE LENGTH(state_alpha) = 2
+                    AND longitude < 0 AND latitude > 0
+                    AND state_alpha NOT IN ('AK', 'HI', 'PR', 'VI')
+                    AND COUNTRY_CODE = 'US'
+                    GROUP BY ROUND(latitude), ROUND(longitude)
+                ) AS S
+                LEFT JOIN (
+                    SELECT ROUND(latitude) AS latitude, ROUND(longitude) AS longitude, COUNT(*) AS COUNT 
+                    FROM cf_stores_checked cfs
+                    JOIN store_list S ON S.id = cfs.store_id
+                    GROUP BY ROUND(latitude), ROUND(longitude)
+                ) AS C
+                ON C.latitude = S.latitude AND C.longitude = S.longitude
+            ORDER BY C.COUNT, RAND()
+            LIMIT 1
+            ) AS ST
+            ON ST.latitude = ROUND(store_list.latitude) AND ST.longitude = ROUND(store_list.longitude)
             WHERE company_name IN (
                 'McDonalds', 'Starbucks', 'Subway', 'Taco Bell', 'ChickFilA',
                 'Wendys', 'Burger King', 'Dunkin', 'Dominos', 'Panera',
@@ -77,9 +98,6 @@ class StorePoint:
                 'Little Caesars', 'Dairy Queen', 'Jack In The Box', 'Panda Express', 'Popeyes', 'Whataburger',
                 'Jimmy Johns', "Hardee's", 'Zaxbys', 'Papa Johns'
             )
-            AND latitude IS NOT NULL AND longitude IS NOT NULL
-            AND country_code = 'US'
-            AND id NOT IN (SELECT store_id FROM cf_stores_checked)
             ORDER BY RAND()
             LIMIT 1
             """
