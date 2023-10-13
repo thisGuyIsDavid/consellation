@@ -98,6 +98,7 @@ class StorePoint:
                 'Little Caesars', 'Dairy Queen', 'Jack In The Box', 'Panda Express', 'Popeyes', 'Whataburger',
                 'Jimmy Johns', "Hardee's", 'Zaxbys', 'Papa Johns'
             )
+            AND store_list.id NOT IN (SELECT store_id FROM cf_stores_checked)
             ORDER BY RAND()
             LIMIT 1
             """
