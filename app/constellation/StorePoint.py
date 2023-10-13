@@ -88,7 +88,6 @@ class StorePoint:
                 ) AS C
                 ON C.latitude = S.latitude AND C.longitude = S.longitude
             ORDER BY C.COUNT, RAND()
-            LIMIT 1
             ) AS ST
             ON ST.latitude = ROUND(store_list.latitude) AND ST.longitude = ROUND(store_list.longitude)
             WHERE company_name IN (
