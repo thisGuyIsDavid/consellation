@@ -99,6 +99,7 @@ class StorePoint:
                 'Jimmy Johns', "Hardee's", 'Zaxbys', 'Papa Johns'
             )
             AND store_list.id NOT IN (SELECT store_id FROM cf_stores_checked)
+            AND store_list.latitude IS NOT NULL AND store_list.longitude IS NOT NULL
             ORDER BY RAND()
             LIMIT 1
             """

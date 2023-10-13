@@ -7,6 +7,7 @@ store_list = StorePoint.get_stores()
 store_lookup = KDTree(store_list, dim=2)
 constellations = Constellation.get_constellations()
 store_to_examine = StorePoint.get_store()
+
 while store_to_examine is not None:
     ConstellationsFinder(
         store_to_examine=store_to_examine,
